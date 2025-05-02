@@ -2,24 +2,31 @@ name: CI/CD flow for test environment
 
 on:
   push:
-    branches: [ "feat/*" ]
+    branches: ["feat/*"]
 
 env:
-  IMAGE_NAME: 'blog-ai-assistant-ai-agent'
-  REGION: 'europe-west4'
-  AR_URL: 'europe-west4-docker.pkg.dev/gcp-automated-blog-test/auto-blog-gar'
+  PROJECT: gcp-automated-blog-test
+  REGION: "europe-west4"
+  # Image
+  IMAGE_NAME: "blog-ai-assistant-ai-agent"
+  AR_URL: "europe-west4-docker.pkg.dev/gcp-automated-blog-test/autoblog-test-gar"
+  # GKE
+  CLUSTER_NAME: autoblog-test-gke-cluster
+  CLUSTER_ZONE: europe-west4-a
+  SKAFFOLD_ENVIRONMENT: test
+  BASTION_HOST: autoblog-test-bastion-vm
+  # SIDECAR CONTAINER
+  AWS_IMAGE: "europe-west4-docker.pkg.dev/gcp-automated-blog-test/autoblog-test-gar/blog-ai-assistant-aws-tunnel:d729945"
 
 jobs:
   sast-analysis:
     permissions: write-all
-    # User definable name of this GitHub Actions job.
     name: semgrep-oss/scan
-    # If you are self-hosting, change the following `runs-on` value: 
     runs-on: ubuntu-latest
 
     container:
-      # A Docker image with Semgrep installed. Do not change this.
       image: semgrep/semgrep
+
     # Skip any PR created by dependabot to avoid permission issues:
     if: (github.actor != 'dependabot[bot]')
 
@@ -35,7 +42,7 @@ jobs:
 
   check-application-mod:
     permissions:
-      contents: 'read'
+      contents: "read"
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.check.outputs.changed }}
@@ -48,7 +55,7 @@ jobs:
         run: |
           git fetch origin ${{ github.ref }} --depth=2
           LAST_COMMIT=$(git rev-parse HEAD~1 2>/dev/null || echo "no_previous_commit")
-    
+
           if [ "$LAST_COMMIT" == "no_previous_commit" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
           elif git diff --name-only $LAST_COMMIT HEAD | grep '^app/'; then
@@ -59,7 +66,7 @@ jobs:
 
   ci-and-cd:
     permissions:
-      contents: 'read'
+      contents: "read"
     needs: check-application-mod
     if: needs.check-application-mod.outputs.changed == 'true'
     runs-on: ubuntu-latest
@@ -69,19 +76,19 @@ jobs:
 
       - name: Google Auth
         id: auth
-        uses: 'google-github-actions/auth@v2'
+        uses: "google-github-actions/auth@v2"
         with:
           credentials_json: "${{ secrets.GOOGLE_TEST_ENVIRONMENT_SA }}"
 
       - name: "Set up Cloud SDK"
         uses: "google-github-actions/setup-gcloud@v1"
-      
+
       # CI - Build
 
       - name: "Docker auth"
         run: |-
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
-      
+
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v4
@@ -97,40 +104,38 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-      
+
       # CD - Deploy
 
-      - id: 'get-credentials'
-        uses: 'google-github-actions/get-gke-credentials@v2'
+      - id: "get-credentials"
+        uses: "google-github-actions/get-gke-credentials@v2"
         with:
-          project_id: 'gcp-automated-blog-test'
-          cluster_name: 'auto-blog-gke-cluster'
-          location: 'europe-west4-a'
-          
+          cluster_name: "${{ env.CLUSTER_NAME }}"
+          location: "${{ env.CLUSTER_ZONE }}"
+
       - name: Configurazione cluster su KubeConfig
         run: |
-          export PRIVATE_IP_GKE_CLUSTER=$(gcloud container clusters describe auto-blog-gke-cluster \
-            --project "gcp-automated-blog-test" \
-            --zone europe-west4-a \
+          export PRIVATE_IP_GKE_CLUSTER=$(gcloud container clusters describe ${{ env.CLUSTER_NAME }} \
+            --project "${{ env.PROJECT }}" \
+            --zone ${{ env.CLUSTER_ZONE }} \
             --format="get(privateClusterConfig.privateEndpoint)")
 
-          kubectl config set-cluster auto-blog-gke-cluster --server=https://127.0.0.1:8443
-          kubectl config set-cluster auto-blog-gke-cluster --tls-server-name=$PRIVATE_IP_GKE_CLUSTER
+          kubectl config set-cluster ${{ env.CLUSTER_NAME }} --server=https://127.0.0.1:8443
+          kubectl config set-cluster ${{ env.CLUSTER_NAME }} --tls-server-name=$PRIVATE_IP_GKE_CLUSTER
 
-          gcloud compute ssh --zone "europe-west4-a" "auto-blog-bastion-vm" --tunnel-through-iap --project "gcp-automated-blog-test" -- -fNL 8443:$PRIVATE_IP_GKE_CLUSTER:443
+          gcloud compute ssh --zone "${{ env.CLUSTER_ZONE }}" "${{ env.BASTION_HOST }}" --tunnel-through-iap --project "${{ env.PROJECT }}" -- -fNL 8443:$PRIVATE_IP_GKE_CLUSTER:443
 
       - name: Deploy
         run: |
           curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64 && \
           sudo install skaffold /usr/local/bin/
-          
-          skaffold deploy -p test --images=app-image=${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:$(git rev-parse --short HEAD)
+          skaffold deploy -p ${{ env.SKAFFOLD_ENVIRONMENT }} --images=app-image=${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:$(git rev-parse --short HEAD),aws-image="${{ env.AWS_IMAGE }}"
 
   cd-only:
     needs: check-application-mod
     if: needs.check-application-mod.outputs.changed == 'false'
     permissions:
-      contents: 'read'
+      contents: "read"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -138,31 +143,30 @@ jobs:
 
       - name: Google Auth
         id: auth
-        uses: 'google-github-actions/auth@v2'
+        uses: "google-github-actions/auth@v2"
         with:
           credentials_json: "${{ secrets.GOOGLE_TEST_ENVIRONMENT_SA }}"
 
       - name: "Set up Cloud SDK"
         uses: "google-github-actions/setup-gcloud@v1"
 
-      - id: 'get-credentials'
-        uses: 'google-github-actions/get-gke-credentials@v2'
+      - id: "get-credentials"
+        uses: "google-github-actions/get-gke-credentials@v2"
         with:
-          project_id: 'gcp-automated-blog-test'
-          cluster_name: 'auto-blog-gke-cluster'
-          location: 'europe-west4-a'
+          cluster_name: "${{ env.CLUSTER_NAME }}"
+          location: "${{ env.CLUSTER_ZONE }}"
 
       - name: Configurazione cluster su KubeConfig
         run: |
-          export PRIVATE_IP_GKE_CLUSTER=$(gcloud container clusters describe auto-blog-gke-cluster \
-            --project "gcp-automated-blog-test" \
-            --zone europe-west4-a \
+          export PRIVATE_IP_GKE_CLUSTER=$(gcloud container clusters describe ${{ env.CLUSTER_NAME }} \
+            --project "${{ env.PROJECT }}" \
+            --zone ${{ env.CLUSTER_ZONE }} \
             --format="get(privateClusterConfig.privateEndpoint)")
 
-          kubectl config set-cluster auto-blog-gke-cluster --server=https://127.0.0.1:8443
-          kubectl config set-cluster auto-blog-gke-cluster --tls-server-name=$PRIVATE_IP_GKE_CLUSTER
+          kubectl config set-cluster ${{ env.CLUSTER_NAME }} --server=https://127.0.0.1:8443
+          kubectl config set-cluster ${{ env.CLUSTER_NAME }} --tls-server-name=$PRIVATE_IP_GKE_CLUSTER
 
-          gcloud compute ssh --zone "europe-west4-a" "auto-blog-bastion-vm" --tunnel-through-iap --project "gcp-automated-blog-test" -- -fNL 8443:$PRIVATE_IP_GKE_CLUSTER:443
+          gcloud compute ssh --zone "${{ env.CLUSTER_ZONE }}" "${{ env.BASTION_HOST }}" --tunnel-through-iap --project "${{ env.PROJECT }}" -- -fNL 8443:$PRIVATE_IP_GKE_CLUSTER:443
 
       - name: Deploy
         run: |
@@ -171,4 +175,4 @@ jobs:
 
           LATEST_TAG=$(gcloud artifacts docker tags list ${{ env.AR_URL }}/${{ env.IMAGE_NAME }}   --sort-by="~timestamp" --limit=1 --format="value(tag)")
 
-          skaffold deploy -p test --images=app-image="${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:$LATEST_TAG"
+          skaffold deploy -p ${{ env.SKAFFOLD_ENVIRONMENT }} --images=app-image="${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:$LATEST_TAG",aws-image="${{ env.AWS_IMAGE }}"
