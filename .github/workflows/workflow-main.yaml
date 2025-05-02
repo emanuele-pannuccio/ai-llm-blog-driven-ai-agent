@@ -16,7 +16,7 @@ env:
   SKAFFOLD_ENVIRONMENT: prod
   BASTION_HOST: autoblog-prod-bastion-vm
   # SIDECAR CONTAINER
-  AWS_IMAGE: "europe-west4-docker.pkg.dev/gcp-automated-blog-test/autoblog-test-gar/blog-ai-assistant-aws-tunnel:1c43008"
+  AWS_IMAGE: "europe-west4-docker.pkg.dev/gcp-automated-blog-prod/autoblog-prod-gar/blog-ai-assistant-aws-tunnel:1c43008"
 
 jobs:
   sast-analysis:
