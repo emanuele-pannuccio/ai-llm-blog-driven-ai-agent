@@ -5,3 +5,4 @@ metadata:
   name: blog-ai-agent-config
 data:
   OLLAMA_BASE_URL: "http://ollama-qwen-service.ollama-qwen.svc.cluster.local:11434/v1"
+  GCP_PROJECT_ID: "gcp-automated-blog-prod"
