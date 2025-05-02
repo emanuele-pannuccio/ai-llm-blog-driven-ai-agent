@@ -39,7 +39,7 @@ spec:
             - name: AWS_REGION
               value: "eu-west-1"
             - name: AWS_ACCESS_KEY_ID_SECRET
-              value: "blog-ai-agent-aws-secret-access-key"
+              value: "blog-ai-agent-aws-access-key-id"
             - name: AWS_SECRET_ACCESS_KEY_SECRET
               value: "blog-ai-agent-aws-secret-access-key"
         - name: blog-ai-agent
