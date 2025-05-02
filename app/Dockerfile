@@ -12,5 +12,3 @@ RUN apk add --no-cache gcc musl-dev mariadb-connector-c-dev pkgconfig && \
 COPY . /app
 
 ENTRYPOINT [ "python3", "/app/main.py" ]
-
-#
