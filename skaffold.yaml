@@ -1,0 +1,17 @@
+apiVersion: skaffold/v4beta8
+kind: Config
+metadata:
+  name: blog-ai-agent-app
+deploy:
+  kubectl: {}
+profiles:
+  - name: test
+    manifests:
+      kustomize:
+        paths:
+          - manifests/overlays/test
+  - name: prod
+    manifests:
+      kustomize:
+        paths:
+          - manifests/overlays/production

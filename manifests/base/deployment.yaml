@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blog-ai-agent-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blog-ai-agent
+  template:
+    metadata:
+      labels:
+        app: blog-ai-agent
+    spec:
+      serviceAccountName: blog-ai-agent-sa
+      containers:
+        - name: blog-ai-aws-tunnel-mysql
+          image: aws-image
+          imagePullPolicy: Always
+          env:
+            - name: REMOTE_PORT
+              value: "3306"
+            - name: LOCAL_PORT
+              value: "3306"
+            - name: AWS_REGION
+              value: "eu-west-1"
+            - name: AWS_ACCESS_KEY_ID_SECRET
+              value: "ai-agent-aws-access-key-id"
+            - name: AWS_SECRET_ACCESS_KEY_SECRET
+              value: "ai-agent-aws-secret-access-key"
+        - name: blog-ai-aws-tunnel-rabbitmq
+          image: aws-image
+          imagePullPolicy: Always
+          env:
+            - name: REMOTE_PORT
+              value: "5671"
+            - name: LOCAL_PORT
+              value: "15671"
+            - name: AWS_REGION
+              value: "eu-west-1"
+            - name: AWS_ACCESS_KEY_ID_SECRET
+              value: "ai-agent-aws-access-key-id"
+            - name: AWS_SECRET_ACCESS_KEY_SECRET
+              value: "ai-agent-aws-secret-access-key"
+        - name: blog-ai-agent
+          image: app-image
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: blog-ai-agent-config

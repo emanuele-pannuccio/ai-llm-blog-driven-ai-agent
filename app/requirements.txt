@@ -1,0 +1,11 @@
+openai
+pymongo
+openai
+pika
+transformers
+html2text
+sqlalchemy
+mysqlclient
+google-cloud-secret-manager
+
+#

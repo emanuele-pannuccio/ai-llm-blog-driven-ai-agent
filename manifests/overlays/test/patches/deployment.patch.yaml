@@ -1,0 +1,37 @@
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: GCP_PROJECT_ID
+    value: "gcp-automated-blog-test"
+
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: INSTANCE_NAME
+    value: "autoblog-test-bastion-host"
+
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: REMOTE_HOST
+    value: "autoblog-test-db.cdm00oci41gf.eu-west-1.rds.amazonaws.com"
+
+# RabbitMQ
+
+- op: add
+  path: /spec/template/spec/containers/1/env/-
+  value:
+    name: GCP_PROJECT_ID
+    value: "gcp-automated-blog-test"
+
+- op: add
+  path: /spec/template/spec/containers/1/env/-
+  value:
+    name: INSTANCE_NAME
+    value: "autoblog-test-bastion-host"
+
+- op: add
+  path: /spec/template/spec/containers/1/env/-
+  value:
+    name: REMOTE_HOST
+    value: "b-903f26a7-f570-48aa-b57f-6c42f31b67b7.mq.eu-west-1.on.aws"
