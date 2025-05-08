@@ -25,6 +25,7 @@ class AIProcessor:
         rabbitmq_port: int,
         rabbitmq_username: str,
         rabbitmq_password: str,
+        rabbitmq_protocol : str,
         mongo_uri: str,
         mongo_database: str,
         mysql_uri : str,
@@ -47,6 +48,7 @@ class AIProcessor:
         """
         self.rabbitmq_host = rabbitmq_host
         self.rabbitmq_queue = rabbitmq_queue
+        self.rabbitmq_protocol = rabbitmq_protocol
         self.rabbitmq_port = rabbitmq_port
         self.rabbitmq_username = rabbitmq_username
         self.rabbitmq_password = rabbitmq_password
@@ -89,10 +91,14 @@ class AIProcessor:
         ssl_context.set_ciphers('ECDHE+AESGCM:!ECDSA')
 
         # url = f"amqps://autoblog-user:autoblog-user!@localhost:15671"
-        url = f"amqps://{self.rabbitmq_username}:{self.rabbitmq_password}@{self.rabbitmq_host}:{self.rabbitmq_port}"
+        url = f"{self.rabbitmq_protocol}://{self.rabbitmq_username}:{self.rabbitmq_password}@{self.rabbitmq_host}:{self.rabbitmq_port}"
         print(url)
         parameters = pika.URLParameters(url)
-        parameters.ssl_options = pika.SSLOptions(context=ssl_context)
+        if os.environ.get("LOCAL_DEBUG") is None:
+            # Connessione a RabbitMQ
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+            ssl_context.set_ciphers('ECDHE+AESGCM:!ECDSA')
+            parameters.ssl_options = pika.SSLOptions(context=ssl_context)
 
         self.rabbit_connection = pika.BlockingConnection(parameters)
         self.channel = self.rabbit_connection.channel()
@@ -190,25 +196,30 @@ Il tuo compito è creare un titolo in italiano per l’articolo che riceverai.
 
         
         categories = self.mysql_session.execute(text("SELECT * FROM categories")).fetchall()
-        categories = "\n".join(["{} => {}".format(k, v) for k, v in categories])
+        categories = "\n".join(["{} => {}".format(r[0], r[1]) for r in categories])
+        categories += "None => None"
         category = self.ollama_client.chat.completions.create(
             model=self.ai_model,
             timeout=60*3,
             messages=[
                 {
                     "role": "system",
-                    "content": "Sei un copywriter. Il tuo compito è selezionare una sola categoria leggendo l'articolo fornito. Le categorie disponibili sono “{}”. Rispondi esclusivamente con l’ID numerico (ad esempio 5 oppure 6), senza virgolette, punti, testo aggiuntivo, né spiegazioni. In caso non sai a quale categoria assegnarlo imposta solo 'None'.".format(categories),
+                    "content": "Sei un copywriter. Il tuo compito è selezionare una sola categoria leggendo l'articolo fornito. Le categorie disponibili sono “{}”. Rispondi esclusivamente con l’ID numerico (ad esempio 5 oppure 6), senza virgolette, punti, testo aggiuntivo, né spiegazioni. In caso non trovi la categoria a cui assegnarlo restituisci il valore 'None'.".format(categories),
                 },
                 {"role": "user", "content": body},
             ],
             temperature=0.6
         ).choices[0].message.content
+        
+        if category != "None" and category in categories:
+            img = self.mysql_session.execute(text("SELECT * FROM categories WHERE id = {}".format(category))).one()[2]
 
         return {
             "title" : title,
             "body" : body,
             "tags" : [tag.strip() for tag in tags.split(",")],
-            "category" : category 
+            "category" : category,
+            "image" : img
         }
     
     def process_message(self, ch, method, properties, body):
@@ -244,8 +255,6 @@ Il tuo compito è creare un titolo in italiano per l’articolo che riceverai.
 
             logger.info("Risposta ricevuta: {}".format(json.dumps(ai_response)))
 
-            # ai_response = {'title': 'Implementazione di una governance finanziaria per modelli cloud multicloud e hybrid: un esempio con Azure, AWS e GCP', 'body': "### Introduzione\n\nCari lettori,\n\nOggi ci troviamo in un mondo dove le organizzazioni e le imprese si trovano a gestire risorse cloud pluridirezionali, compresi modelli di nuvola multicloud e hybrid. In questo articolo esploriamo come implementare una governance finanziaria per queste configurazioni cloud, focalizzandoci in particolare su Microsoft Azure, Amazon Web Services (AWS) e Google Cloud Platform (GCP). Scopriremo come monitorare costi e bilanciare spese in un quadro uniforme, consentendo un'ottimizzazione costiera che include tutte le cariche di lavoro, sia in locale, in cloud o in ambiente misto.\n\n### La Necessità di una Governance Finanziaria\n\nIniziamo con un breve esempio: l’organizzazione DevOps ABCs ha un footprint cloud distribuito tra Azure (7 sottoscrizioni attive), GCP (2 conti fatturati) e AWS (un singolo account). Dalla data 1 Settembre 2018, la loro infrastruttura include due server fisici: Windows Server A con Microsoft SQL Server e Linux Server A con MySQL. Entrambi sono ospitati in loco.\n\n### Implementazione del Dashboard di Costi\n\n#### Azure\n\nIn Azure, organizziamo le risorse utilizzando Gruppi di Gestione (Management Groups) per garantire che risorse dipendenti con lo stesso ciclo di vita siano contenute nello stesso gruppo. Ad esempio, un'app web con un backend di database in un ambiente specifico (Dev, Test o Prod) dovrebbe essere inclusa nello stesso gruppo di risorse; se sono utilizzati tutti i tre ambienti, ne sarebbero necessari tre gruppi separati.\n\nPer monitorare le spese in Azure e AWS, utilizziamo il Cost Management in Azure per integrare dati da diversi provider. Questo implica l'utilizzo di API come [Azure Cost Management APIs](https://docs.microsoft.com/en-us/rest/api/cost-management/) e Data Factory per la raccolta dei dati.\n\n#### AWS\n\nIn AWS, utilizziamo il Cost Management in Azure per monitorare le spese. Ciò è possibile configurando l'integrazione tra Cost and Usage Reports di AWS e Azure Cost Management. Questo consente di importare i dati delle spese direttamente nel dashboard di Azure.\n\n### Approfondimenti\n\nLa governance finanziaria in cloud richiede un'attenzione speciale per quanto riguarda la stima dei costi. Le principali sfide includono:\n\n1. **Stima Costosa e Precisa**: Per le organizzazioni con infrastrutture miste, è cruciale avere una stima delle spese iniziali che sia precisa e affidabile.\n2. **Tagging Strategico**: La strategia di etichettamento corretta può facilitare l'attribuzione dei costi a progetti specifici o centri di costo.\n3. **Consolidamento dei Costi**: Utilizzare strumenti come Power BI per creare un dashboard interattivo che riunisca dati da diversi provider cloud.\n\n### Conclusione\n\nRaccogliere e monitorare i costi in tempo reale non solo permette di ottimizzare le spese, ma consente anche una maggiore trasparenza finanziaria. Questo è particolarmente importante per organizzazioni che utilizzano modelli cloud multicloud o hybrid.\n\n### Stay Update!\n\nPer mantenerti aggiornato su nuove evoluzioni e miglioramenti nella governance finanziaria cloud, sii attento alle novità nel [Microsoft Premier Developer Blog](https://devblogs.microsoft.com/premier-developer/cloud-economics/) e visita la nostra sezione di approfondimenti per ottenere ulteriori risorse.\n\nSegui il nostro blog per continuare a scoprire come ottimizzare le tue spese cloud in modo efficiente.", 'tags': ['tag', 'cloud', 'governance_finanziaria', 'azure', 'aws', 'gcp', 'costi_cloud', 'dashboards', 'api', 'etichettamento', 'stima_costi', 'trasparenza_financeira', 'hybrid_cloud', 'multicloud'], 'category': '5'} 
-
             if 'none' in ai_response["category"].lower():
                 ai_response["category"] = None
 
@@ -253,7 +262,7 @@ Il tuo compito è creare un titolo in italiano per l’articolo che riceverai.
                 text("""
                     INSERT INTO posts
                     (title, body, image, publisher_id, category_id, status_id)
-                    VALUES(:title, :body, '/static/images/default.png', NULL, :category, 1);
+                    VALUES(:title, :body, :image, NULL, :category, 1);
                 """),
                 ai_response
             )
@@ -329,6 +338,21 @@ Il tuo compito è creare un titolo in italiano per l’articolo che riceverai.
 
 
 def access_secret(secret_id, project_id, version_id="latest"):
+    if os.environ.get("LOCAL_DEBUG"):
+        if secret_id == "rabbit-connection":
+            return json.dumps({
+                "rabbitmq_protocol" : "amqp",
+                "rabbitmq_host" : "localhost",
+                "rabbitmq_queue" : "scrapy_items",
+                "rabbitmq_port" : "5672",
+                "rabbitmq_username" : "guest",
+                "rabbitmq_password" : "guest"
+            })
+        if secret_id == "mongodb-connection":
+            return json.dumps({"mongo_uri" : "mongodb+srv://autoblog-mongo:KcNjapi7vudFnGiP@ing-sis-dist.jsjoj8n.mongodb.net/?retryWrites=true&w=majority&appName=ing-sis-dist", "mongo_database": "automated-blog"})
+        if secret_id == "mysql-connection":
+            return json.dumps({"mysql_uri" : "mysql://my_user:my_password@192.168.1.187:3306/my_database"})
+        
     client = secretmanager.SecretManagerServiceClient()
     name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
     response = client.access_secret_version(request={"name": name})

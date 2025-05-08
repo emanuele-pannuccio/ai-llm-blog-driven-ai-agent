@@ -9,6 +9,9 @@
             "type": "debugpy",
             "request": "launch",
             "program": "main.py",
+            "env": {
+                "LOCAL_DEBUG": "true"
+            },
             "console": "integratedTerminal",
             "envFile": "${workspaceFolder}/.env"
         }
