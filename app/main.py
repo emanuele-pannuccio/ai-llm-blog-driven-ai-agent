@@ -336,7 +336,6 @@ Il tuo compito è creare un titolo in italiano per l’articolo che riceverai.
                 print(f"[!] Connessione RabbitMQ persa: {e}. Riprovo tra 5 secondi...")
                 time.sleep(5)
 
-
 def access_secret(secret_id, project_id, version_id="latest"):
     if os.environ.get("LOCAL_DEBUG"):
         if secret_id == "rabbit-connection":
