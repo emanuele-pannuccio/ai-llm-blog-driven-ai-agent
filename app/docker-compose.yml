@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"   # Porta AMQP
+      - "15672:15672" # Interfaccia web
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=my_password
+      - MYSQL_DATABASE=my_database
+      - MYSQL_USER=my_user
+      - MYSQL_PASSWORD=my_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - OLLAMA_BASE_URL=http://192.168.1.187:11434/v1   # valore coerente con l'ambiente locale
+      - LOCAL_DEBUG=true
+    volumes:
+      - .:/app
+    working_dir: /app
+    ports:
+      - "8000:8000"  # Cambia se la tua app ascolta su un'altra porta
+
+volumes:
+  mongo-data:
+  rabbitmq-data:
+  mysql-data:

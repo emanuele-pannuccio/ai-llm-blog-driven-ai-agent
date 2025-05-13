@@ -341,7 +341,7 @@ def access_secret(secret_id, project_id, version_id="latest"):
         if secret_id == "rabbit-connection":
             return json.dumps({
                 "rabbitmq_protocol" : "amqp",
-                "rabbitmq_host" : "localhost",
+                "rabbitmq_host" : "192.168.1.187",
                 "rabbitmq_queue" : "scrapy_items",
                 "rabbitmq_port" : "5672",
                 "rabbitmq_username" : "guest",
