@@ -34,4 +34,4 @@
   path: /spec/template/spec/containers/1/env/-
   value:
     name: REMOTE_HOST
-    value: "b-0333906f-4421-4a35-8dd3-8df87a3fbd82.mq.eu-west-1.on.aws"
+    value: "b-891751b1-7ad5-48f6-9436-91f995fa1761.mq.eu-west-1.on.aws"
