@@ -20,13 +20,13 @@
   path: /spec/template/spec/containers/0/env/-
   value:
     name: GCP_OAUTH_AUD
-    value: "117432766023465702993"
+    value: "114670324091805665108"
     
 - op: add
   path: /spec/template/spec/containers/0/env/-
   value:
     name: AWS_ROLE_ARN
-    value: "arn:aws:iam::460446231952:role/autoblog-test-gcp-117432766023465702993"
+    value: "arn:aws:iam::460446231952:role/autoblog-test-gcp-114670324091805665108"
 
 # RabbitMQ
 
@@ -46,16 +46,16 @@
   path: /spec/template/spec/containers/1/env/-
   value:
     name: REMOTE_HOST
-    value: "b-891751b1-7ad5-48f6-9436-91f995fa1761.mq.eu-west-1.on.aws"
+    value: "b-29f0b38e-57c4-4c1b-8a8a-b57868379b9e.mq.eu-west-1.on.aws"
 
 - op: add
   path: /spec/template/spec/containers/1/env/-
   value:
     name: GCP_OAUTH_AUD
-    value: "117432766023465702993"
+    value: "114670324091805665108"
     
 - op: add
   path: /spec/template/spec/containers/1/env/-
   value:
     name: AWS_ROLE_ARN
-    value: "arn:aws:iam::460446231952:role/autoblog-test-gcp-117432766023465702993"
+    value: "arn:aws:iam::460446231952:role/autoblog-test-gcp-114670324091805665108"
