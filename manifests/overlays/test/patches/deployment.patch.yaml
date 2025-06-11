@@ -16,6 +16,18 @@
     name: REMOTE_HOST
     value: "autoblog-test-db.cdm00oci41gf.eu-west-1.rds.amazonaws.com"
 
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: GCP_OAUTH_AUD
+    value: "117432766023465702993"
+    
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: AWS_ROLE_ARN
+    value: "arn:aws:iam::460446231952:role/autoblog-test-gcp-117432766023465702993"
+
 # RabbitMQ
 
 - op: add
@@ -35,3 +47,15 @@
   value:
     name: REMOTE_HOST
     value: "b-891751b1-7ad5-48f6-9436-91f995fa1761.mq.eu-west-1.on.aws"
+
+- op: add
+  path: /spec/template/spec/containers/1/env/-
+  value:
+    name: GCP_OAUTH_AUD
+    value: "117432766023465702993"
+    
+- op: add
+  path: /spec/template/spec/containers/1/env/-
+  value:
+    name: AWS_ROLE_ARN
+    value: "arn:aws:iam::460446231952:role/autoblog-test-gcp-117432766023465702993"

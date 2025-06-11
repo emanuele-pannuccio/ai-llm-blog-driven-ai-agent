@@ -8,3 +8,8 @@ patches:
     target:
       kind: Deployment
       name: blog-ai-agent-deployment
+
+  - path: ./patches/service-account.patch.yaml
+    target:
+      kind: ServiceAccount
+      name: blog-ai-agent-sa
